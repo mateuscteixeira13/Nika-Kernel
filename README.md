@@ -1,15 +1,30 @@
 # What is Nika?
-Nika is an open-source kernel inspired by Linux and OSDev, with philosophies similar to Unix/Linux. It allows free modifications and distributions, being completely free.
-# How compile?
 
-You need:
+Nika is an open-source operating system kernel inspired by Linux and the OSDev community, following philosophies similar to Unix/Linux systems.
 
-GCC
-NASM
-GAS(AS)
-MAKE
+It allows free modification and redistribution, being completely free and open for experimentation and learning.
 
-for install use: sudo apt install binutils build-essential 
+---
 
-# For build run:
+# How to compile
+
+## Requirements
+
+You need the following tools installed:
+
+- GCC  
+- NASM  
+- GNU Assembler (GAS / as)  
+- Make  
+
+### Install dependencies (Debian/Ubuntu)
+
+sudo apt install binutils build-essential
+
+---
+
+## Build
+
+To build the kernel, simply run:
+
 make

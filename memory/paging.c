@@ -35,7 +35,6 @@ void map_page(uint32_t* pd, uint32_t virt, uint32_t phys, uint32_t flags){
     pt[pt_index] = phys | (flags & 0xFFF) | PAGE_PRESENT;
 }
 
-
 void map_physical_region(uint32_t* pd, uint32_t phys_start, uint32_t size, uint32_t flags){
    
     uint32_t phys_aligned = phys_start & 0xFFFFF000;
@@ -60,6 +59,25 @@ void map_framebuffer(uint32_t fb_addr, uint32_t fb_size){
         "mov %%eax, %%cr3\n"
         ::: "eax"
     );
+}
+
+void map_user_space(uint32_t* pd, uint32_t code_addr, uint32_t code_size, 
+                    uint32_t stack_addr, uint32_t stack_size) {
+   
+    uint32_t code_pages = (code_size + PAGE_SIZE - 1) / PAGE_SIZE;
+    for(uint32_t i = 0; i < code_pages; i++){
+        uint32_t virt = code_addr + (i * PAGE_SIZE);
+        uint32_t phys = (uint32_t)pmm_alloc_page();
+        map_page(pd, virt, phys, PAGE_RW | PAGE_USER);
+    }
+    
+
+    uint32_t stack_pages = (stack_size + PAGE_SIZE - 1) / PAGE_SIZE;
+    for(uint32_t i = 0; i < stack_pages; i++){
+        uint32_t virt = stack_addr - ((i + 1) * PAGE_SIZE);  
+        uint32_t phys = (uint32_t)pmm_alloc_page();
+        map_page(pd, virt, phys, PAGE_RW | PAGE_USER);
+    }
 }
 
 void clone_kernel_space(uint32_t *new_pd){

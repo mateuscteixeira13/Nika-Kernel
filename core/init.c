@@ -1,30 +1,13 @@
-/** 
- * I will organize this 
-*/
-#include <hal.h>
-#include <vga.h>
-#include <mem.h>
-#include <stdint.h>
-#include <multiboot.h>
-#include <pic.h>
-#include <idt.h>
-#include <irq.h>
-#include <heap.h>
-#include <paging.h>
-#include <ramfs.h>
-#include <kbd.h>
-#include <gdt.h>
-#include <bshell.h>
-#include <pit.h>
-#include <vbe.h>
-#include <serial.h>
+#include <kernel.h>
 
 typedef enum{
     KERNEL_SUCCESS,
     KERNEL_FAULT
 } KernelStatus;
 
-const char kernel_version[] = "nikakrnl-generic:052c2";
+const char kernel_version[] = "nikakrnl-generic:052c3";
+
+extern void user_main();
 
 /**
  * A kernel initialization function
@@ -60,6 +43,8 @@ KernelStatus kernel_init(multiboot_info_t* mbd, uint32_t magic){
 
     kybrd_init();
 
+    mouse_init();
+
     x86Sti();
 
     /**
@@ -71,8 +56,6 @@ KernelStatus kernel_init(multiboot_info_t* mbd, uint32_t magic){
      * Initialize the RAM FileSystem
      */
     __initramfs();
-
-
 
     return KERNEL_SUCCESS;
 }
@@ -87,7 +70,19 @@ void kmain(multiboot_info_t* mbd, uint32_t magic){
     }
 
     gdl_print("Kernel Booted!\n");
+    gdl_print_color("Happy birthday Jesus Christ!\n", GREEN);
+    gdl_print_color("Happy Christmas!\n", GREEN);
+   
 
+
+    /**
+     * TODO: Will be used, now the code have a #PF and Reboot, this will be correct
+     * 
+     * __hiuser();
+     * enter_usermode(0x10000, 0x1000, 0x800000);
+     * user_main();
+    */
+    
     for(;;){
         schedule();
         Halt();

@@ -29,16 +29,16 @@ static bool middle = false;
 static int scroll = 0;
 
 static void wait_for_input() {
-    while (inb(MOUSE_STATUS_PORT) & 0x2) {
+    while (x86read(MOUSE_STATUS_PORT) & 0x2) {
         Halt(); // Preserve CPU energy!
     } 
 }
 
 static void send_mouse_command(uint8_t cmd) {
     wait_for_input();
-    outb(MOUSE_CMD_WRITE, MOUSE_STATUS_PORT);
+    x86write(MOUSE_CMD_WRITE, MOUSE_STATUS_PORT);
     wait_for_input();
-    outb(cmd, MOUSE_DATA_PORT);
+    x86write(cmd, MOUSE_DATA_PORT);
 }
 
 static void process_packet() {
@@ -62,7 +62,7 @@ static void process_packet() {
 }
 
 void mouse_irq_handler() {
-    uint8_t data = inb(MOUSE_DATA_PORT);
+    uint8_t data = x86read(MOUSE_DATA_PORT);
     mouse_packet[packet_index++] = data;
 
     if (packet_index == 3 || packet_index == 4) {
@@ -70,7 +70,7 @@ void mouse_irq_handler() {
         packet_index = 0;
     }
 
-    send_eoi(12);
+    pic_send_eoi(12);
 }
 
 void mouse_init() {

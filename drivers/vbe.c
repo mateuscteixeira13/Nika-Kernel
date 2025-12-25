@@ -143,7 +143,6 @@ void scroll_screen(uint32_t pixels){
     draw_rect(0, fb_info.height - pixels, fb_info.width, pixels, 0x000000);
 }
 
-
 void draw_char(uint32_t x, uint32_t y, unsigned char c, uint32_t color){
     if(c > 127) return;
     for(int row = 0; row < 8; row++){
@@ -151,6 +150,29 @@ void draw_char(uint32_t x, uint32_t y, unsigned char c, uint32_t color){
         for(int col = 0; col < 8; col++){
             if(bits & (1 << col)){
                 put_pixel(x + col, y + row, color);
+            }
+        }
+    }
+}
+
+
+void gdl_putchar(char c) {
+    if(c == '\n') {
+        gdl_log.x = 0;
+        gdl_log.y += 8;
+        if(gdl_log.y + 8 > fb_info.height) {
+            scroll_screen(8);
+            gdl_log.y -= 8;
+        }
+    } else {
+        draw_char(gdl_log.x, gdl_log.y, c, gdl_log.color);
+        gdl_log.x += 8;
+        if(gdl_log.x + 8 > fb_info.width) {
+            gdl_log.x = 0;
+            gdl_log.y += 8;
+            if(gdl_log.y + 8 > fb_info.height) {
+                scroll_screen(8);
+                gdl_log.y -= 8;
             }
         }
     }
@@ -176,3 +198,25 @@ void gdl_print(const char *str){
         str++;
     }
 }
+
+void gdl_print_color(const char *str, uint32_t color){
+    while(*str){
+        if(*str == '\n'){
+            gdl_log.x = 0;
+            gdl_log.y += 8;
+            if(gdl_log.y + 8 > fb_info.height) {
+                scroll_screen(8);  // scroll up
+                gdl_log.y -= 8;
+            }
+        } else {
+            draw_char(gdl_log.x, gdl_log.y, *str, color);
+            gdl_log.x += 8;
+            if(gdl_log.x + 8 > fb_info.width){
+                gdl_log.x = 0;
+                gdl_log.y += 8;
+            }
+        }
+        str++;
+    }
+}
+

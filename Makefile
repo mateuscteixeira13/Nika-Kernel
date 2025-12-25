@@ -1,47 +1,75 @@
-CFLAGS = -ffreestanding -m32 -c -O3 -Iinc -Wall -Werror -Wextra
-SRC_DIR = src/
+CFLAGS = -ffreestanding -m32 -O2 -Wall -Wextra -Werror -fno-stack-protector -fno-pie -no-pie -Iinc
 OBJ_DIR = obj/
 CC = gcc
+NASM = nasm
+AS = as
 
-all:
-	mkdir -p obj/
+C_SOURCES := $(wildcard core/*.c) \
+             $(wildcard core/io/*.c) \
+             $(wildcard drivers/*.c) \
+             $(wildcard lib/*.c) \
+             $(wildcard memory/*.c) \
+             $(wildcard process/*.c) \
+             $(wildcard fs/*.c) \
+             $(wildcard userland/*.c)
 
-	$(CC) $(CFLAGS) $(SRC_DIR)kernel.c -o $(OBJ_DIR)kernel.o
-	$(CC) $(CFLAGS) $(SRC_DIR)hal.c -o $(OBJ_DIR)hal.o
-	$(CC) $(CFLAGS) $(SRC_DIR)stdio.c -o $(OBJ_DIR)stdio.o
-	$(CC) $(CFLAGS) $(SRC_DIR)string.c -o $(OBJ_DIR)string.o
-	$(CC) $(CFLAGS) $(SRC_DIR)pmm.c -o $(OBJ_DIR)pmm.o
-	$(CC) $(CFLAGS) $(SRC_DIR)pic.c -o $(OBJ_DIR)pic.o
-	$(CC) $(CFLAGS) $(SRC_DIR)irq.c -o $(OBJ_DIR)irq.o
-	$(CC) $(CFLAGS) $(SRC_DIR)gdt.c -o $(OBJ_DIR)gdt.o
-	$(CC) $(CFLAGS) $(SRC_DIR)idt.c -o $(OBJ_DIR)idt.o
-	$(CC) $(CFLAGS) $(SRC_DIR)irq.c -o $(OBJ_DIR)irq.o
-	$(CC) $(CFLAGS) $(SRC_DIR)fork.c -o $(OBJ_DIR)fork.o
-	$(CC) $(CFLAGS) $(SRC_DIR)heap.c -o $(OBJ_DIR)heap.o
-	$(CC) $(CFLAGS) $(SRC_DIR)paging.c -o $(OBJ_DIR)paging.o
-	$(CC) $(CFLAGS) $(SRC_DIR)pf.c -o $(OBJ_DIR)pf.o
-	$(CC) $(CFLAGS) $(SRC_DIR)ramfs.c -o $(OBJ_DIR)ramfs.o
-	$(CC) $(CFLAGS) $(SRC_DIR)timer.c -o $(OBJ_DIR)timer.o
-	$(CC) $(CFLAGS) $(SRC_DIR)serial.c -o $(OBJ_DIR)serial.o
-	$(CC) $(CFLAGS) $(SRC_DIR)drivers/vbe.c -o $(OBJ_DIR)vbe.o
-	$(CC) $(CFLAGS) $(SRC_DIR)drivers/kybrd.c -o $(OBJ_DIR)kybrd.o
-	
-	as -32 $(SRC_DIR)entry.s -o $(OBJ_DIR)entry.o
-	nasm -f elf32 $(SRC_DIR)idt_stub.asm -o $(OBJ_DIR)idt_stub.o
-	nasm -f elf32 $(SRC_DIR)irq_stub.asm -o $(OBJ_DIR)irq_stub.o
-	nasm -f elf32 $(SRC_DIR)gdt_stub.asm -o $(OBJ_DIR)gdt_stub.o
-	
-	ld -m elf_i386 -T linker.ld -o core.sys $(OBJ_DIR)*.o
+C_OBJS := $(addprefix $(OBJ_DIR),$(notdir $(C_SOURCES:.c=.o)))
 
-	mkdir -p iso/boot/grub/
-	mkdir -p iso/boot/kernel/
+ASM_NASM_SOURCES := $(wildcard asm/*.asm)
+ASM_NASM_OBJS := $(addprefix $(OBJ_DIR),$(notdir $(ASM_NASM_SOURCES:.asm=.o)))
 
-	cp -r grub.cfg iso/boot/grub/
-	cp -r core.sys iso/boot/kernel/core.sys
+ASM_GAS_SOURCES := $(wildcard asm/*.s)
+ASM_GAS_OBJS := $(addprefix $(OBJ_DIR),$(notdir $(ASM_GAS_SOURCES:.s=.o)))
 
+ALL_OBJS := $(C_OBJS) $(ASM_NASM_OBJS) $(ASM_GAS_OBJS)
+
+all: obj_dirs core.sys iso
+
+obj_dirs:
+	mkdir -p $(OBJ_DIR)
+
+$(OBJ_DIR)%.o: core/%.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(OBJ_DIR)%.o: core/io/%.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(OBJ_DIR)%.o: drivers/%.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(OBJ_DIR)%.o: lib/%.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(OBJ_DIR)%.o: memory/%.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(OBJ_DIR)%.o: process/%.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(OBJ_DIR)%.o: fs/%.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(OBJ_DIR)%.o: userland/%.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+
+$(OBJ_DIR)%.o: asm/%.asm
+	$(NASM) -f elf32 $< -o $@
+
+$(OBJ_DIR)%.o: asm/%.s
+	$(AS) --32 $< -o $@
+
+core.sys: $(ALL_OBJS)
+	ld -m elf_i386 -T linker.ld -o $@ $(ALL_OBJS)
+
+iso: core.sys
+	mkdir -p iso/boot/grub iso/boot/kernel
+	cp grub.cfg iso/boot/grub/
+	cp core.sys iso/boot/kernel/core.sys
 	grub-mkrescue -o nika.iso iso/
-
-	qemu-system-x86_64 -cdrom nika.iso -display sdl -serial stdio 
+	qemu-system-i386 -cdrom nika.iso -display sdl -serial stdio
 
 clean:
-	rm -rf obj/* *.sys
+	rm -rf $(OBJ_DIR)*.o core.sys iso nika.iso
+
+.PHONY: all obj_dirs iso clean

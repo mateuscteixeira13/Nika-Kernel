@@ -24,5 +24,6 @@ void copy_addr_space(process_t *parent, process_t *child);
 void map_physical_region(uint32_t* pd, uint32_t phys_start, uint32_t size, uint32_t flags);
 void map_framebuffer(uint32_t fb_addr, uint32_t fb_size);
 
-
+void map_user_space(uint32_t* pd, uint32_t code_addr, uint32_t code_size, 
+                    uint32_t stack_addr, uint32_t stack_size);
 #endif
