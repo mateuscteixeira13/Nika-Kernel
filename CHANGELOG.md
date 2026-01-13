@@ -41,9 +41,9 @@
 - Fixed VBE issues
 
 ## v0.6.2
-- Removed uneccesarry features in this time(Will be implemented if necessary):
+- Removed unneccesarry features in this time(Will be implemented if necessary):
 - Removed userland -> Will be implemented
 - Removed syscalls -> Will be implemented
 - Added PCI -> FIXME!
-- Code refination in organization
+- Code refinement in organization
 - Added more I/O functions
