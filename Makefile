@@ -1,4 +1,4 @@
-CFLAGS = -ffreestanding -m32 -O2 -Wall -Wextra -Werror -fno-stack-protector -fno-pie -no-pie -Iinc
+CFLAGS = -ffreestanding -m32 -O2 -Wall -Wextra -Werror -fno-stack-protector -Wno-unused-variable -fno-pie -no-pie -Iinc
 OBJ_DIR = obj/
 CC = gcc
 NASM = nasm

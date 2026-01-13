@@ -1,6 +1,3 @@
-#ifndef KBD_H
-#define KBD_H
+#pragma once
 
 void kybrd_init();
-
-#endif

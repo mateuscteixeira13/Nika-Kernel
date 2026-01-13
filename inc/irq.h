@@ -1,5 +1,4 @@
-#ifndef IRQ_H
-#define IRQ_H
+#pragma once
 
 #include <stdint.h>
 
@@ -18,5 +17,3 @@ void irq_uninstall_handler(int irq);
 void irq_handler(registers_t *r);
 void init_io();
 void irq_install();
-
-#endif

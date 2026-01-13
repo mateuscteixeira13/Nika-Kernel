@@ -1,5 +1,4 @@
-#ifndef LIB_H
-#define LIB_H
+#pragma once
 
 #include <stddef.h>
 #include <stdint.h>
@@ -9,5 +8,3 @@ char *strncpy(char *dest, const char *src, size_t n);
 char* strcpy(char* dest, const char* src);
 char* strchr(const char* str, char c);
 size_t strlen(const char* str);
-
-#endif

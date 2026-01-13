@@ -1,5 +1,4 @@
-#ifndef RAMFS_H
-#define RAMFS_H
+#pragma once
 
 #include <stdint.h>
 #include <stddef.h>
@@ -38,5 +37,3 @@ fs_ops_t* fs_get_ops(const char *path);
 void ramfs_mount(const char *path);
 void ramfs_list();
 void __initramfs();
-
-#endif

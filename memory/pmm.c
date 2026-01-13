@@ -7,7 +7,6 @@
 
 #define MAX_MEM_BLOCKS 256
 
-
 static uint8_t *pmm_bitmap;
 static uint32_t pmm_bitmap_size;
 

@@ -4,7 +4,8 @@
 #include <fork.h>
 #include <heap.h>
 #include <serial.h>
-
+#include <hal.h>
+#include <vga.h>
 /**
  * Bro, this sucked my energy LOL .-.
  */
@@ -135,18 +136,9 @@ void init_pages(){
         map_page(kernel_page_dir, addr, addr, PAGE_RW);
     }
     
-    serial_printf("Activating paging...\n");
+    INFO("Activating paging...\n");
     /** 
      * Activate paging
      */
-    __asm__ volatile(
-        "mov %0, %%cr3\n"
-        "mov %%cr0, %%eax\n"
-        "or $0x80000000, %%eax\n"
-        "mov %%eax, %%cr0\n"
-        :
-        : "r"(kernel_page_dir_phys)
-        : "eax"
-    );
-    
+    EnablePaging(kernel_page_dir_phys);
 }

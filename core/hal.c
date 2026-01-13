@@ -28,6 +28,16 @@ uint8_t x86read(uint16_t port){
     return ret;
 }
 
+void x86WriteL(uint16_t port, uint32_t value) {
+    __asm__ volatile ("outl %0, %1" : : "a"(value), "Nd"(port));
+}
+
+uint32_t x86ReadL(uint16_t port) {
+    uint32_t ret;
+    __asm__ volatile ("inl  %1, %0" : "=a"(ret) : "Nd"(port));
+    return ret;
+}
+
 void x86IO_wait(){
     __asm__ volatile("outb %%al, $0x80" :: "a"(0));
 }
@@ -67,10 +77,14 @@ void x86IRQ_clearmask(uint32_t irq_line){
     x86write(port, value);
 }
 
-/**
- * Initalize the Hardware Abstraction Layer
- */
-HAL_Status Hal_init(){
-    // TODO: This will be implemented, for now only return SUCCESS
-    return HAL_SUCESS;
+void EnablePaging(uint32_t addr){
+    __asm__ volatile(
+        "mov %0, %%cr3\n"
+        "mov %%cr0, %%eax\n"
+        "or $0x80000000, %%eax\n"
+        "mov %%eax, %%cr0\n"
+        :
+        : "r"(addr)
+        : "eax"
+    );
 }

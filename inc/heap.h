@@ -1,5 +1,4 @@
-#ifndef HEAP_H
-#define HEAP_H
+#pragma once
 
 #include <stdint.h>
 #include <stddef.h>
@@ -10,5 +9,3 @@ void free(__attribute__((unused)) void* ptr);
 void *memset(void *dst, int val, size_t size);
 void *memcpy(void *dest, const void *src, size_t n);
 void* memmove(void* dest, const void* src, size_t n);
-
-#endif

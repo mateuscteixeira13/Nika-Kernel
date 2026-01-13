@@ -5,10 +5,7 @@
 #include <vga.h>
 #include <stdbool.h>
 #include <ramfs.h>
-#include <vbe.h>
-
-#define Stdout(str) gdl_print(str)
-
+#include <gd.h>
 
 /**
  * A simple rootfs in RAM :)
@@ -29,7 +26,6 @@ static size_t mount_count = 0;
 
 #define MAX_MOUNTS 16
 
-
 void ramfs_init(){
     memset(ramfs_files, 0, sizeof(ramfs_files));
     ramfs_file_count = 0;
@@ -39,12 +35,12 @@ void ramfs_init(){
 
 FS_STATUS ramfs_create(const char* name){
     if(fs_true != true){
-        Stdout("Ocorred a error: ROOT is not avaliable! :(\n");
+        INFO("Ocorred a error: ROOT is not avaliable! :(\n");
         return FAULT;
     }
 
     if(ramfs_file_count >= RAMFS_MAX_FILES){
-        Stdout("Ocorred a error the file excedds the ROOT max files\n");
+        INFO("Ocorred a error the file excedds the ROOT max files\n");
         return -1;
     }
 
@@ -62,7 +58,7 @@ FS_STATUS ramfs_create(const char* name){
 
 FS_STATUS ramfs_write(const char *name, const uint8_t* buf, size_t len){
     if(fs_true != true){
-        Stdout("Ocorred a error: ROOT is not avaliable! :(\n");
+        INFO("Ocorred a error: ROOT is not avaliable! :(\n");
         return FAULT;
     }
 
@@ -83,7 +79,7 @@ FS_STATUS ramfs_write(const char *name, const uint8_t* buf, size_t len){
 
 FS_STATUS ramfs_read(const char *name, uint8_t* buf, size_t max_len){
     if(fs_true != true){
-        Stdout("Ocorred a error: ROOT is not avaliable! :(\n");
+        INFO("Ocorred a error: ROOT is not avaliable! :(\n");
         return FAULT;
     }
 
@@ -105,12 +101,12 @@ FS_STATUS ramfs_read(const char *name, uint8_t* buf, size_t max_len){
 
 FS_STATUS fs_mount(const char *path, fs_ops_t *ops){
     if(mount_count >= MAX_MOUNTS){
-        kprintf("fs_mount: máximo de mounts atingido!\n");
+        EarlyLog("fs_mount: máximo de mounts atingido!\n");
         return FAULT;
     }
     
     if(fs_true != true){
-        Stdout("Ocorred a error: ROOT is not avaliable! :(\n");
+        INFO("Ocorred a error: ROOT is not avaliable! :(\n");
         return FAULT;
     }
 
@@ -141,20 +137,20 @@ void ramfs_mount(const char *path){
 
 void ramfs_list(){
     if(fs_true != true){
-        Stdout("Ocorred a error: ROOT is not avaliable! :(\n");
+        INFO("Ocorred a error: ROOT is not avaliable! :(\n");
         return;
     }
     
-    kprintf("r:/? %(u):\n", (unsigned)ramfs_file_count);
+    EarlyLog("r:/? %(u):\n", (unsigned)ramfs_file_count);
     for(size_t i = 0; i < ramfs_file_count; i++){
-        kprintf(" - %s (%u bytes)\n", ramfs_files[i].name, (unsigned)ramfs_files[i].size);
+        EarlyLog(" - %s (%u bytes)\n", ramfs_files[i].name, (unsigned)ramfs_files[i].size);
     }
 }
 
 void __initramfs(){
     ramfs_init();
-    Stdout("ROOT: RAMFS initialized!\n");
-    Stdout("Mounting r:\n");
+    INFO("ROOT: RAMFS initialized!\n");
+    INFO("Mounting r:\n");
     ramfs_mount("r:/");
-    Stdout("Mounted r: at RAM (Root dir)\n");
+    INFO("Mounted r: at RAM (Root dir)\n");
 }

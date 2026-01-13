@@ -1,5 +1,4 @@
-#ifndef PAGING_H
-#define PAGING_H
+#pragma once
 
 #include <stdint.h>
 #include <fork.h>
@@ -26,4 +25,3 @@ void map_framebuffer(uint32_t fb_addr, uint32_t fb_size);
 
 void map_user_space(uint32_t* pd, uint32_t code_addr, uint32_t code_size, 
                     uint32_t stack_addr, uint32_t stack_size);
-#endif

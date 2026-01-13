@@ -1,5 +1,4 @@
-#ifndef FORK_H
-#define FORK_H
+#pragma once
 
 #include <stdint.h>
 #include <stddef.h>
@@ -29,5 +28,3 @@ extern uint32_t next_pid;
 process_t* create_process(uint32_t eip,  __attribute__((unused))uint32_t esp,  __attribute__((unused))uint32_t ebp);
 void schedule();
 int __fork();
-
-#endif

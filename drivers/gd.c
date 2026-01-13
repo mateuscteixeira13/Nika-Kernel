@@ -1,12 +1,14 @@
 #include <multiboot.h>
 #include <stdint.h>
 #include <vga.h>
-#include <vbe.h>
+#include <gd.h>
 #include <pit.h>
 #include <serial.h>
 #include <paging.h>
 #include <font8x8_basic.h>
 #include <heap.h>
+#include <stdarg.h>
+
 
 // GD = Graphical Driver
 int gd_ok = 0;
@@ -33,12 +35,12 @@ static gdl_log_t gdl_log = {0xFFFFFF, 0, 0};
 GD_STATUS get_framebuffer(multiboot_info_t* mbd, uint32_t magic){
     
     if(magic != MULTIBOOT_BOOTLOADER_MAGIC){
-        serial_printf("GD: Error! The magic is invalid! Got: 0x%x\n", magic);
+        EarlyLog("GD: Error! The magic is invalid! Got: 0x%x\n", magic);
         return GERROR;
     }
     
     if(!(mbd->flags & (1 << 12))){
-        serial_printf("GD: Error! No framebuffer (flags: 0x%x)\n", mbd->flags);
+        EarlyLog("GD: Error! No framebuffer (flags: 0x%x)\n", mbd->flags);
         return GERROR;
     }
     
@@ -46,8 +48,8 @@ GD_STATUS get_framebuffer(multiboot_info_t* mbd, uint32_t magic){
     fb_info.type = mbd->framebuffer_type;
 
    
-    if(fb_info.type != 1){
-        serial_printf("GD: Error! Framebuffer type is not RGB (type=%d)\n", fb_info.type);
+    if(fb_info.type != 1 && fb_info.type != 2){
+        EarlyLog("GD: Error! Framebuffer type is not RGB (type=%d)\n", fb_info.type);
         return GERROR;
     }
     
@@ -59,16 +61,16 @@ GD_STATUS get_framebuffer(multiboot_info_t* mbd, uint32_t magic){
    
     
     if(fb_info.width == 0 || fb_info.height == 0){
-        serial_printf("GD: Error! Invalid dimensions\n");
+        EarlyLog("GD: Error! Invalid dimensions\n");
         return GERROR;
     }
     
-    if(fb_info.bpp != 32 && fb_info.bpp != 24){
-        serial_printf("GD: Warning! BPP is %d (expected 24 or 32)\n", fb_info.bpp);
+    if(fb_info.bpp != 32 && fb_info.bpp != 24 && fb_info.bpp != 16){
+        EarlyLog("GD: Warning! BPP is %d (expected 16, 24 or 32)\n", fb_info.bpp);
     }
     
     if(fb_info.addr == 0){
-        serial_printf("GD: Error! Framebuffer address is NULL\n");
+        EarlyLog("GD: Error! Framebuffer address is NULL\n");
         return GERROR;
     }
     
@@ -77,7 +79,7 @@ GD_STATUS get_framebuffer(multiboot_info_t* mbd, uint32_t magic){
 
 GD_STATUS gd_init(multiboot_info_t* mbd, uint32_t magic){
     if(get_framebuffer(mbd, magic) != 0){
-        serial_printf("GD Failed to get framebuffer\n");
+        EarlyLog("GD Failed to get framebuffer\n");
         return GERROR;
     }
 
@@ -96,25 +98,33 @@ static inline void write_fb_pixel(volatile uint32_t* fb, uint32_t offset, uint32
 void put_pixel(uint32_t x, uint32_t y, uint32_t color) {
     if(!gd_ok) return;
     if(x >= fb_info.width || y >= fb_info.height) return;
-    
-    volatile uint32_t* fb = (volatile uint32_t*)fb_info.addr;
-    uint32_t offset;
-    
+
     if(fb_info.bpp == 32){
-        offset = y * (fb_info.pitch / 4) + x;
-        write_fb_pixel(fb, offset, color);
+        volatile uint32_t* fb = (volatile uint32_t*)fb_info.addr;
+        uint32_t offset = y * (fb_info.pitch / 4) + x;
+        fb[offset] = color;
     } else if(fb_info.bpp == 24){
-        volatile uint8_t* fb8 = (volatile uint8_t*)fb_info.addr;
+        volatile uint8_t* fb = (volatile uint8_t*)fb_info.addr;
         uint32_t offset = y * fb_info.pitch + x * 3;
-        fb8[offset + 0] = (color >> 0) & 0xFF;  
-        fb8[offset + 1] = (color >> 8) & 0xFF;  
-        fb8[offset + 2] = (color >> 16) & 0xFF; 
+        fb[offset + 0] = (color >> 0) & 0xFF;  
+        fb[offset + 1] = (color >> 8) & 0xFF;  
+        fb[offset + 2] = (color >> 16) & 0xFF; 
+    } else if(fb_info.bpp == 16){
+        volatile uint16_t* fb = (volatile uint16_t*)fb_info.addr;
+        uint32_t offset = y * (fb_info.pitch / 2) + x;
+
+        // Convert 32-bit RGB (0xRRGGBB) to RGB565 Supporting 16 bpp mode!
+        uint16_t r = (color >> 19) & 0x1F; // 5 bits
+        uint16_t g = (color >> 10) & 0x3F; // 6 bits
+        uint16_t b = (color >> 3) & 0x1F;  
+
+        fb[offset] = (r << 11) | (g << 5) | b;
     }
 }
 
 void draw_rect(uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint32_t color){
     if(gd_ok == 0){
-        serial_printf("GD is not initialized\n");
+        EarlyLog("GD is not initialized\n");
         return;
     }
     
@@ -128,7 +138,7 @@ void draw_rect(uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint32_t color){
 
 void clear(uint32_t color){
     if(gd_ok == 0){
-        serial_printf("GD is not initialized\n");
+        EarlyLog("GD is not initialized\n");
         return;
     }
     
@@ -155,7 +165,6 @@ void draw_char(uint32_t x, uint32_t y, unsigned char c, uint32_t color){
     }
 }
 
-
 void gdl_putchar(char c) {
     if(c == '\n') {
         gdl_log.x = 0;
@@ -178,25 +187,76 @@ void gdl_putchar(char c) {
     }
 }
 
-void gdl_print(const char *str){
-    while(*str){
-        if(*str == '\n'){
+void kDebug(const char *fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+
+    char buf[32];
+
+    while(*fmt) {
+        if(*fmt == '%') {
+            fmt++;
+            switch(*fmt) {
+                case 'd': {
+                    int val = va_arg(args, int);
+                    itoa(val, buf, 10);
+                    for(char *p = buf; *p; p++)
+                        gdl_putchar(*p);
+                    break;
+                }
+                case 'x': {
+                    int val = va_arg(args, int);
+                    itoa(val, buf, 16);
+                    for(char *p = buf; *p; p++)
+                        gdl_putchar(*p);
+                    break;
+                }
+                case 'p': {
+                    uintptr_t val = (uintptr_t)va_arg(args, void*);
+                    gdl_print_color("0x", gdl_log.color);
+                    itoa(val, buf, 16);
+                    for(char *p = buf; *p; p++)
+                        gdl_putchar(*p);
+                    break;
+                }
+                case 'c': {
+                    char val = (char)va_arg(args, int);
+                    gdl_putchar(val);
+                    break;
+                }
+                case 's': {
+                    char *val = va_arg(args, char*);
+                    while(*val) gdl_putchar(*val++);
+                    break;
+                }
+                case '%': {
+                    gdl_putchar('%');
+                    break;
+                }
+                default:
+                    gdl_putchar('%');
+                    gdl_putchar(*fmt);
+                    break;
+            }
+        } else if(*fmt == '\n') {
             gdl_log.x = 0;
             gdl_log.y += 8;
             if(gdl_log.y + 8 > fb_info.height) {
-                scroll_screen(8);  // scroll up
+                scroll_screen(8);
                 gdl_log.y -= 8;
             }
         } else {
-            draw_char(gdl_log.x, gdl_log.y, *str, gdl_log.color);
+            gdl_putchar(*fmt);
             gdl_log.x += 8;
-            if(gdl_log.x + 8 > fb_info.width){
+            if(gdl_log.x + 8 > fb_info.width) {
                 gdl_log.x = 0;
                 gdl_log.y += 8;
             }
         }
-        str++;
+        fmt++;
     }
+
+    va_end(args);
 }
 
 void gdl_print_color(const char *str, uint32_t color){

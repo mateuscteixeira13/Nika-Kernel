@@ -7,55 +7,81 @@ typedef enum{
 
 const char kernel_version[] = "nikakrnl-generic:052c3";
 
-extern void user_main();
-
 /**
  * A kernel initialization function
  */
 KernelStatus kernel_init(multiboot_info_t* mbd, uint32_t magic){
     x86Cli();
 
-    InitStdio();
-
-    __serial();
-
-    if(Hal_init() == HAL_ERROR){
-        gdl_print("Error to initializing the HAL\n");
-        return KERNEL_FAULT;
+    if(!gd_init(mbd, magic)){
+        WARN("GD just failed\n");
     }
+
+    InitStdio();
 
     gdt_init();
     idt_init();
+  
     pic_init();
-
     pit_init();
 
     if(pmm_init(mbd, magic) != 0){
-       gdl_print("Error to initialize the PMM\n");
+       kDebug("Error to initialize the PMM\n");
        return KERNEL_FAULT;
     }
+    
+    init_pages();   
+    
+    if(!gd_init(mbd, magic)){
+        WARN("GD just failed\n");
+    }
 
-    init_pages();
+    INFO("Maping VGA memory to virtual context\n");
+    map_framebuffer((uintptr_t)vga, VGA_WIDTH * VGA_HEIGHT * 2);
 
-    gd_init(mbd, magic);
+    INFO("Success!\n");
 
+    INFO("Initializing heap\n");
     heap_init();
 
+    INFO("Success!\n");
+
+    INFO("Initializing keyboard device\n");
     kybrd_init();
 
+    INFO("Success!\n");
+
+    INFO("Initializing mouse device\n");
     mouse_init();
 
+    INFO("Success!\n");
+
     x86Sti();
+
+    INFO("Initializing video driver(BIOS Mode)\n");
+    
+    INFO("Success!\n");
+
+    INFO("Initializing PCI Subsystem\n");
+    pcisub_init();
+
+    INFO("Success!\n");
 
     /**
      * Now init a basic fork
      */ 
+    INFO("Initializing fork\n");
     __fork();
+
+    INFO("Success!\n");
 
     /**
      * Initialize the RAM FileSystem
      */
+    INFO("Initializing RAM FileSystem\n");
     __initramfs();
+
+    INFO("Success!\n");
 
     return KERNEL_SUCCESS;
 }
@@ -65,24 +91,11 @@ KernelStatus kernel_init(multiboot_info_t* mbd, uint32_t magic){
  */
 void kmain(multiboot_info_t* mbd, uint32_t magic){ 
     if(kernel_init(mbd, magic) == KERNEL_FAULT){
-        gdl_print("[SYSBOOT] Fault to init kernel\n");
+        kDebug("[SYSBOOT] Fault to init kernel\n");
         return;
     }
 
-    gdl_print("Kernel Booted!\n");
-    gdl_print_color("Happy birthday Jesus Christ!\n", GREEN);
-    gdl_print_color("Happy Christmas!\n", GREEN);
-   
-
-
-    /**
-     * TODO: Will be used, now the code have a #PF and Reboot, this will be correct
-     * 
-     * __hiuser();
-     * enter_usermode(0x10000, 0x1000, 0x800000);
-     * user_main();
-    */
-    
+    INFO("Kernel just booted successfully!\n");
     for(;;){
         schedule();
         Halt();

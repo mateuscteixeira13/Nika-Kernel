@@ -1,8 +1,6 @@
-#ifndef KERNEL_H
-#define KERNEL_h
+#pragma once
 
 #include <hal.h>
-#include <vga.h>
 #include <mem.h>
 #include <stdint.h>
 #include <multiboot.h>
@@ -11,13 +9,14 @@
 #include <irq.h>
 #include <heap.h>
 #include <paging.h>
+#include <vga.h>
 #include <ramfs.h>
 #include <kbd.h>
 #include <gdt.h>
 #include <pit.h>
-#include <vbe.h>
-#include <serial.h>
+#include <gd.h>
 #include <mouse.h>
-#include <syscall.h>
+#include <syscall.h> // Just here! I do nothing!
+#include <pci.h>
 
-#endif
+extern volatile uint32_t *vga;

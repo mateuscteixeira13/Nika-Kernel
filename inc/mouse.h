@@ -1,6 +1,3 @@
-#ifndef MOUSE_H
-#define MOUSE_H
+#pragma once
 
 void mouse_init();
-
-#endif
