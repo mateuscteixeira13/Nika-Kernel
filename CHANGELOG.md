@@ -46,3 +46,4 @@
 - Removed syscalls -> Will be implemented
 - Added PCI -> FIXME!
 - Code refination in organization
+- Added more I/O functions
