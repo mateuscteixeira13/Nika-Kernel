@@ -5,70 +5,68 @@
 
 #define HEAP_PAGE_SIZE PAGE_SIZE
 
-static uint8_t* heap_base = NULL;
-static uint32_t heap_offset = 0;
-static uint32_t heap_size = 0;
+typedef struct HeapBlock {
+    uint32_t size;
+    uint8_t flags;
+    struct HeapBlock* next;
+} HeapBlock;
 
-void heap_init(){
-    heap_base = (uint8_t*) pmm_alloc_page();
-    heap_offset = 0;
-    heap_size = HEAP_PAGE_SIZE;
+static HeapBlock* heap_start = NULL;
+static HeapBlock* heap_end = NULL;
+static uint8_t* heap_limit = NULL;
+
+void heap_init() {
+    /** Try to use PMM */
+    uint8_t* page = (uint8_t*) pmm_alloc_page();
+    heap_start = (HeapBlock*) page;
+    heap_start->size = HEAP_PAGE_SIZE - sizeof(HeapBlock);
+    heap_start->flags = 0;
+    heap_start->next = NULL;
+    heap_end = heap_start;
+    heap_limit = page + HEAP_PAGE_SIZE;
 }
 
-void* malloc(uint32_t size){
-    if(heap_offset + size > heap_size){
-        /**
-         * Try to call memory of PMM
-         */
-        uint8_t* new_page = (uint8_t*) pmm_alloc_page();
-        if(!new_page){
-            return NULL;
+void* malloc(uint32_t size) {
+    HeapBlock* block = heap_start;
+    while(block) {
+        if(block->flags == 0 && block->size >= size) {
+            if(block->size > size + sizeof(HeapBlock)) {
+                HeapBlock* new_block = (HeapBlock*) ((uint8_t*)block + sizeof(HeapBlock) + size);
+                new_block->size = block->size - size - sizeof(HeapBlock);
+                new_block->flags = 0;
+                new_block->next = block->next;
+                block->next = new_block;
+                block->size = size;
+            }
+            block->flags = 1;
+            return (uint8_t*)block + sizeof(HeapBlock);
         }
-
-        heap_base = new_page;
-        heap_offset = 0;
-        heap_size = HEAP_PAGE_SIZE;
-        
+        block = block->next;
     }
 
-    void* ptr = heap_base + heap_offset;
-    heap_offset += size;
-    return ptr;
+    uint8_t* page = (uint8_t*) pmm_alloc_page();
+    if(!page) return NULL;
+    HeapBlock* new_block = (HeapBlock*) page;
+    new_block->size = HEAP_PAGE_SIZE - sizeof(HeapBlock);
+    new_block->flags = 0;
+    new_block->next = NULL;
+    heap_end->next = new_block;
+    heap_end = new_block;
+    heap_limit += HEAP_PAGE_SIZE;
+    return malloc(size);
 }
 
-void free(__attribute__((unused)) void* ptr){
-    // TODO: This will be implemented
-}
-
-void *memset(void *dst, int val, size_t size){
-    uint8_t *d = (uint8_t *)dst;
-    while (size--){
-        *d++ = (uint8_t)val;
-    }
-    
-    return dst;
-}
-
-void *memcpy(void *dest, const void *src, size_t n){
-    uint8_t *d = dest;
-    const uint8_t *s = src;
-    for(size_t i = 0; i < n; i++) d[i] = s[i];
-    return dest;
-}
-
-void* memmove(void* dest, const void* src, size_t n){
-    uint8_t* d = (uint8_t*)dest;
-    const uint8_t* s = (const uint8_t*)src;
-
-    if(d < s){
-        for(size_t i = 0; i < n; i++){
-            d[i] = s[i];
+void free(void* ptr) {
+    if(!ptr) return;
+    HeapBlock* block = (HeapBlock*) ((uint8_t*)ptr - sizeof(HeapBlock));
+    block->flags = 0;
+    HeapBlock* current = heap_start;
+    while(current) {
+        if(current->flags == 0 && current->next && current->next->flags == 0) {
+            current->size += sizeof(HeapBlock) + current->next->size;
+            current->next = current->next->next;
+            continue;
         }
-    } else if(d > s){
-        for(size_t i = n; i != 0; i--){
-            d[i-1] = s[i-1];
-        }
+        current = current->next;
     }
-
-    return dest;
 }
