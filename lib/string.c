@@ -36,3 +36,12 @@ size_t strlen(const char* str) {
     while(str[len]) len++;
     return len;
 }
+
+void *memset(void *dst, int val, size_t size){
+    uint8_t *d = (uint8_t *)dst;
+    while (size--){
+        *d++ = (uint8_t)val;
+    }
+    
+    return dst;
+}
